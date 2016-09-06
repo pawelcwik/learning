@@ -24,6 +24,9 @@ public class AsyncResource {
     @Resource
     ManagedExecutorService mes;
 
+    @Resource(mappedName = "concurrentOrchestration")
+    ManagedExecutorService orchestration;
+
     @GET
     public void get(@Suspended AsyncResponse response) {
         CompletableFuture.supplyAsync(this::doSomeWork,mes).thenAccept(response::resume);
@@ -56,21 +59,21 @@ public class AsyncResource {
 
     @GET
     @Path("Orchestration")
-    public String fetchRequest() {
+    public void fetchMessage(@Suspended AsyncResponse response) {
         Supplier<String> supplier = () -> target.request().get(String.class);
-        CompletableFuture.supplyAsync(supplier,mes)
+        CompletableFuture.supplyAsync(supplier,orchestration)
                 .thenApply(this::process)
                 .exceptionally(this::handle)
-                .thenAccept(this::consume);
-        return "+++";
+                .thenApply(this::consume).thenAccept(response::resume);
     }
 
     String handle(Throwable t) {
-        return "sorry we're overloaded!";
+        return "sorry we're overloaded!" + t.getMessage();
     }
 
-    void consume(String message) {
+    String consume(String message) {
         this.target.request().post(Entity.text(message));
+        return message;
     }
 
     public String process (String input) {
