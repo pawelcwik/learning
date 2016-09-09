@@ -1,10 +1,10 @@
 package com.airhacks.com.airhacks.async.boundary;
 
+import com.airhacks.porcupine.execution.boundary.Dedicated;
 import org.glassfish.jersey.client.ClientProperties;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-import javax.enterprise.concurrent.ManagedExecutorService;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.client.Client;
@@ -14,6 +14,7 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.container.AsyncResponse;
 import javax.ws.rs.container.Suspended;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -21,15 +22,16 @@ import java.util.logging.Logger;
 @Path("async")
 public class AsyncResource {
 
-    @Resource
-    ManagedExecutorService mes;
+    @Inject @Dedicated
+    ExecutorService cpu;
 
-    @Resource(mappedName = "concurrentOrchestration")
-    ManagedExecutorService orchestration;
+//    @Resource(name = "concurrentOrchestration")
+    @Inject @Dedicated
+    ExecutorService orchestration;
 
     @GET
     public void get(@Suspended AsyncResponse response) {
-        CompletableFuture.supplyAsync(this::doSomeWork,mes).thenAccept(response::resume);
+        CompletableFuture.supplyAsync(this::doSomeWork, cpu).thenAccept(response::resume);
     }
 
 
